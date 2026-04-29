@@ -180,8 +180,8 @@ async def get_all_images(
         ) for img in images
     ]
 
-@router.get("/{image_id}", response_model=ImageResponse)
-async def get_image(
+@router.get("/{image_id}/info", response_model=ImageResponse)
+async def get_image_info(
     image_id: int,
     db: Session = Depends(get_db)
 ):
@@ -290,3 +290,21 @@ async def delete_image(
     db.commit()
     
     return {"success": True, "message": "图片已删除"}
+
+@router.get("/file/{image_id}")
+async def get_image_file(
+    image_id: int,
+    db: Session = Depends(get_db)
+):
+    image = db.query(ImageRecord).filter(ImageRecord.id == image_id).first()
+    if not image:
+        raise HTTPException(status_code=404, detail="图片不存在")
+    
+    file_path = Path(image.file_path)
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="图片文件不存在")
+    
+    return FileResponse(
+        path=str(file_path),
+        media_type=image.content_type or "application/octet-stream"
+    )
