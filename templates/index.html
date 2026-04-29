@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片去重平台 - 基于YOLO</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>图片去重平台</h1>
+            <p class="subtitle">基于YOLOv8的智能图片相似度检测系统</p>
+        </header>
+
+        <main>
+            <section class="upload-section">
+                <div class="upload-box" id="uploadBox">
+                    <div class="upload-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                    </div>
+                    <h3>上传图片</h3>
+                    <p>点击或拖拽图片到此处</p>
+                    <p class="supported-formats">支持格式: JPG, PNG, BMP, WEBP</p>
+                    <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.bmp,.webp" multiple>
+                </div>
+            </section>
+
+            <section class="preview-section" id="previewSection" style="display: none;">
+                <h2>图片预览</h2>
+                <div class="image-preview" id="imagePreview">
+                    <img id="previewImg" src="" alt="预览图片">
+                </div>
+                <div class="preview-info" id="previewInfo"></div>
+            </section>
+
+            <section class="result-section" id="resultSection" style="display: none;">
+                <h2>检测结果</h2>
+                <div class="result-summary" id="resultSummary"></div>
+                <div class="similar-images" id="similarImages">
+                    <h3>相似图片列表</h3>
+                    <div class="similar-list" id="similarList"></div>
+                </div>
+            </section>
+
+            <section class="history-section" id="historySection">
+                <div class="section-header">
+                    <h2>已上传图片</h2>
+                    <button class="btn-refresh" id="refreshBtn">刷新</button>
+                </div>
+                <div class="image-grid" id="imageGrid">
+                    <div class="loading">加载中...</div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>&copy; 2024 图片去重平台 | 基于YOLOv8的智能相似度检测</p>
+        </footer>
+    </div>
+
+    <div class="modal" id="loadingModal">
+        <div class="modal-content">
+            <div class="spinner"></div>
+            <p id="loadingText">正在处理图片...</p>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
