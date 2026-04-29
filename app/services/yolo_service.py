@@ -1,7 +1,7 @@
 import numpy as np
 from ultralytics import YOLO
 from PIL import Image
-import torch
+import cv2
 from typing import List, Optional
 import logging
 
@@ -31,8 +31,8 @@ class YOLOService:
             results = model(image_path, verbose=False)
             
             if not results or len(results) == 0:
-                logger.warning(f"No results from YOLO for image: {image_path}")
-                return None
+                logger.warning(f"No results from YOLO for image: {image_path}, using pixel-based features")
+                return self._extract_pixel_features(image_path)
             
             result = results[0]
             
@@ -42,15 +42,20 @@ class YOLOService:
                 features = self._extract_detection_features(result)
             
             if features is None:
-                features = self._extract_random_features()
+                logger.warning(f"YOLO detection features failed, using pixel-based features for: {image_path}")
+                return self._extract_pixel_features(image_path)
             
             normalized_features = self._normalize(features)
-            logger.info(f"Extracted features shape: {normalized_features.shape}")
+            logger.info(f"Extracted YOLO-based features shape: {normalized_features.shape}")
             return normalized_features
             
         except Exception as e:
-            logger.error(f"Error extracting features: {str(e)}", exc_info=True)
-            return None
+            logger.error(f"Error extracting YOLO features: {str(e)}, trying pixel-based features", exc_info=True)
+            try:
+                return self._extract_pixel_features(image_path)
+            except Exception as e2:
+                logger.error(f"Error extracting pixel features: {str(e2)}", exc_info=True)
+                return None
     
     def _extract_pooled_features(self, result) -> Optional[np.ndarray]:
         try:
@@ -107,10 +112,59 @@ class YOLOService:
             logger.warning(f"Error extracting detection features: {str(e)}")
         return None
     
-    def _extract_random_features(self) -> np.ndarray:
-        np.random.seed(42)
-        features = np.random.rand(YOLO_FEATURE_SIZE)
-        return self._normalize(features)
+    def _extract_pixel_features(self, image_path: str) -> Optional[np.ndarray]:
+        try:
+            img = cv2.imread(image_path)
+            if img is None:
+                img_pil = Image.open(image_path)
+                img = np.array(img_pil)
+                if len(img.shape) == 3:
+                    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+            
+            if img is None:
+                logger.error(f"Failed to read image: {image_path}")
+                return None
+            
+            img_resized = cv2.resize(img, (64, 64))
+            
+            if len(img_resized.shape) == 3:
+                gray = cv2.cvtColor(img_resized, cv2.COLOR_BGR2GRAY)
+            else:
+                gray = img_resized
+            
+            hist = cv2.calcHist([gray], [0], None, [64], [0, 256])
+            hist = hist.flatten()
+            
+            hist_b = cv2.calcHist([img_resized], [0], None, [32], [0, 256]).flatten()
+            hist_g = cv2.calcHist([img_resized], [1], None, [32], [0, 256]).flatten()
+            hist_r = cv2.calcHist([img_resized], [2], None, [32], [0, 256]).flatten()
+            
+            color_hist = np.concatenate([hist_b, hist_g, hist_r])
+            
+            mean = np.mean(img_resized, axis=(0, 1))
+            std = np.std(img_resized, axis=(0, 1))
+            
+            if len(mean) == 1:
+                mean = np.array([mean[0], mean[0], mean[0]])
+                std = np.array([std[0], std[0], std[0]])
+            
+            stats = np.concatenate([mean, std])
+            
+            features = np.concatenate([hist, color_hist, stats])
+            
+            current_size = len(features)
+            if current_size < YOLO_FEATURE_SIZE:
+                features = np.pad(features, (0, YOLO_FEATURE_SIZE - current_size), mode='constant')
+            elif current_size > YOLO_FEATURE_SIZE:
+                features = features[:YOLO_FEATURE_SIZE]
+            
+            normalized_features = self._normalize(features)
+            logger.info(f"Extracted pixel-based features shape: {normalized_features.shape}")
+            return normalized_features
+            
+        except Exception as e:
+            logger.error(f"Error in pixel-based feature extraction: {str(e)}", exc_info=True)
+            return None
     
     def _normalize(self, features: np.ndarray) -> np.ndarray:
         norm = np.linalg.norm(features)

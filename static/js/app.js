@@ -204,7 +204,7 @@ class ImageDeduplicationApp {
             this.imageGrid.innerHTML = images.map(img => `
                 <div class="image-card" data-id="${img.id}">
                     <div class="card-image">
-                        <img src="/api/images/file/${img.id}" alt="${img.original_filename}" 
+                        <img src="/uploads/${img.filename}" alt="${img.original_filename}" 
                              onerror="this.style.display='none'">
                     </div>
                     <div class="card-info">
